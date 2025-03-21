@@ -1,0 +1,13 @@
+{
+    "data": [
+      {
+        "protocol": "REST",
+        "domen": "/order/create",
+        "method": "POST",
+        "input_body": "{\"Order_number\":1231231,\"Order_amount\":123}",
+        "output_code": 206,
+        "output_head": "",
+        "output_body": "{Registrasion_status: “success”}"
+      }
+    ]
+  }

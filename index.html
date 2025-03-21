@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Request Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .response {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+        }
+        .protocol-fields {
+            display: none;
+        }
+        .protocol-fields.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>API Request Test</h1>
+        <form id="apiForm">
+            <div class="form-group">
+                <label for="protocol">Select Protocol:</label>
+                <select id="protocol" name="protocol" required>
+                    <option value="SOAP">SOAP</option>
+                    <option value="REST">REST</option>
+                </select>
+            </div>
+
+            <!-- SOAP Fields -->
+            <div id="soapFields" class="protocol-fields">
+                <div class="form-group">
+                    <label for="domen">Domain:</label>
+                    <input type="text" id="domen" name="domen">
+                </div>
+                <div class="form-group">
+                    <label for="method">Method:</label>
+                    <input type="text" id="method" name="method">
+                </div>
+                <div class="form-group">
+                    <label for="input_body">Input Body (XML):</label>
+                    <textarea id="input_body" name="input_body" rows="5"></textarea>
+                </div>
+            </div>
+
+            <!-- REST Fields -->
+            <div id="restFields" class="protocol-fields">
+                <div class="form-group">
+                    <label for="restUrl">REST Endpoint:</label>
+                    <input type="text" id="restUrl" name="restUrl">
+                </div>
+                <div class="form-group">
+                    <label for="restMethod">HTTP Method:</label>
+                    <select id="restMethod" name="restMethod">
+                        <option value="GET">GET</option>
+                        <option value="POST">POST</option>
+                        <option value="PUT">PUT</option>
+                        <option value="DELETE">DELETE</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="restBody">Request Body (JSON):</label>
+                    <textarea id="restBody" name="restBody" rows="5"></textarea>
+                </div>
+            </div>
+
+            <button type="submit">Send Request</button>
+        </form>
+
+        <div class="response" id="response">
+            <h2>Response:</h2>
+            <p><strong>Output Code:</strong> <span id="output_code"></span></p>
+            <p><strong>Output Head:</strong> <span id="output_head"></span></p>
+            <p><strong>Output Body:</strong> <span id="output_body"></span></p>
+        </div>
+    </div>
+
+    <script>
+        // Toggle between SOAP and REST fields
+        const protocolSelect = document.getElementById('protocol');
+        const soapFields = document.getElementById('soapFields');
+        const restFields = document.getElementById('restFields');
+
+        protocolSelect.addEventListener('change', () => {
+            if (protocolSelect.value === 'SOAP') {
+                soapFields.classList.add('active');
+                restFields.classList.remove('active');
+            } else {
+                restFields.classList.add('active');
+                soapFields.classList.remove('active');
+            }
+        });
+
+        // Initialize fields based on default selection
+        protocolSelect.dispatchEvent(new Event('change'));
+
+        // Handle form submission
+        document.getElementById('apiForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            const protocol = document.getElementById('protocol').value;
+
+            // Prepare JSON request
+            const requestData = {
+                protocol: protocol
+            };
+
+            if (protocol === 'SOAP') {
+                requestData.domen = document.getElementById('domen').value;
+                requestData.method = document.getElementById('method').value;
+                requestData.input_body = document.getElementById('input_body').value;
+            } else {
+                requestData.domen = document.getElementById('restUrl').value;
+                requestData.method = document.getElementById('restMethod').value;
+                requestData.input_body = JSON.parse(document.getElementById('restBody').value);
+            }
+
+            // Send JSON request to backend
+            fetch('http://localhost:8080/SendRequest', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('output_code').textContent = data.output_code || 'N/A';
+                document.getElementById('output_head').textContent = JSON.stringify(JSON.parse(data.output_head || '{}'), null, 2);
+                document.getElementById('output_body').textContent = JSON.stringify(JSON.parse(data.output_body || '{}'), null, 2);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('output_code').textContent = 'Error';
+                document.getElementById('output_head').textContent = 'N/A';
+                document.getElementById('output_body').textContent = error.message;
+            });
+                    });
+    </script>
+</body>
+</html>
