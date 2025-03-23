@@ -7,10 +7,11 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"reflect"
 )
 
 func RequestSenderHandler(w http.ResponseWriter, r *http.Request) {
-	requestData, err := readAndParseRequest(r)
+	requestList, err := readAndParseRequest(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -18,14 +19,14 @@ func RequestSenderHandler(w http.ResponseWriter, r *http.Request) {
 
 	var Response ResponseOutputStruct
 
-	if requestData.Protocol == "REST" {
-		Response, err = sendRESTRequest(requestData)
+	if requestList.Protocol == "REST" {
+		Response, err = sendRESTRequest(requestList)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-	} else if requestData.Protocol == "SOAP" {
-		Response, err = sendSOAPRequest(requestData)
+	} else if requestList.Protocol == "SOAP" {
+		Response, err = sendSOAPRequest(requestList)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -60,42 +61,56 @@ func RequestReceiverHandler(res http.ResponseWriter, req *http.Request) {
 }
 
 func handleRESTRequest(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		http.Error(w, "Failed to read request body", http.StatusInternalServerError)
+		http.Error(w, "Failed to read request body", http.StatusBadRequest)
 		return
 	}
 	defer r.Body.Close()
 
-	fmt.Println("Request Body:", string(body))
+	var httpJSON map[string]interface{}
+	err = json.Unmarshal(body, &httpJSON)
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	}
 
-	for i := 0; i < len(server_data.Data); i++ {
+	for i := 0; i < len(endPointsConfig.List); i++ {
 
-		responseJSON, err := json.Marshal(server_data.Data[i].OutputBody)
+		if endPointsConfig.List[i].Url != r.URL.Path {
+			continue
+		}
+
+		if endPointsConfig.List[i].Method != r.Method {
+			continue
+		}
+
+		if !reflect.DeepEqual(endPointsConfig.List[i].InputBody, httpJSON) {
+			continue
+		}
+
+		responseJSON, err := json.Marshal(endPointsConfig.List[i].OutputBody)
 		if err != nil {
 			http.Error(w, "Failed to generate JSON response", http.StatusInternalServerError)
 			return
 		}
 
-		if server_data.Data[i].OutputHead == "" {
+		if endPointsConfig.List[i].OutputHead == "" {
 			w.Header().Set("Content-Type", "application/json")
 		} else {
-			w.Header().Set("Content-Type", server_data.Data[i].OutputHead)
+			w.Header().Set("Content-Type", endPointsConfig.List[i].OutputHead)
 		}
 
-		w.WriteHeader(server_data.Data[i].OutputCode)
+		w.WriteHeader(endPointsConfig.List[i].OutputCode)
 		w.Write(responseJSON)
 		return
 	}
+
+	http.Error(w, "Not Found", http.StatusNotFound)
 }
 
 func handleSOAPRequest(w http.ResponseWriter, r *http.Request) {
-	for i := 0; i < len(server_data.Data); i++ {
+	for i := 0; i < len(endPointsConfig.List); i++ {
 		if r.Method != http.MethodPost {
 			continue
 		}
@@ -108,7 +123,7 @@ func handleSOAPRequest(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
 
 		respMessage := SOAPResponse{
-			Message: fmt.Sprintf(server_data.Data[i].OutputBody),
+			Message: fmt.Sprintf(endPointsConfig.List[i].OutputBody),
 		}
 
 		responseXML, err := xml.MarshalIndent(SOAPEnvelope{
@@ -124,13 +139,14 @@ func handleSOAPRequest(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		if server_data.Data[i].OutputHead == "" {
+		if endPointsConfig.List[i].OutputHead == "" {
 			w.Header().Set("Content-Type", "text/xml; charset=utf-8")
 		} else {
-			w.Header().Set("Content-Type", server_data.Data[i].OutputHead)
+			w.Header().Set("Content-Type", endPointsConfig.List[i].OutputHead)
 		}
 
-		w.WriteHeader(server_data.Data[i].OutputCode)
+		w.WriteHeader(endPointsConfig.List[i].OutputCode)
 		w.Write(responseXML)
 	}
+	http.Error(w, "Not Found", http.StatusNotFound)
 }

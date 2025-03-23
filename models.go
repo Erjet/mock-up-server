@@ -15,13 +15,13 @@ type input_data struct {
 	Body    SOAPBody `xml:"Body"`
 }
 
-type DataParams struct {
-	Domen      string `json:"domen"`
-	Method     string `json:"method"`
-	InputBody  string `json:"input_body"`
-	OutputCode int    `json:"output_code"`
-	OutputHead string `json:"output_head"`
-	OutputBody string `json:"output_body"`
+type EndPointParams struct {
+	Url        string                 `json:"domen"`
+	Method     string                 `json:"method"`
+	InputBody  map[string]interface{} `json:"input_body"`
+	OutputCode int                    `json:"output_code"`
+	OutputHead string                 `json:"output_head"`
+	OutputBody string                 `json:"output_body"`
 }
 
 type RequestData struct {
@@ -31,8 +31,8 @@ type RequestData struct {
 	Url      string `json:"domen"`
 }
 
-type TestData struct {
-	Data []DataParams `json:"data"`
+type EndPointsList struct {
+	List []EndPointParams `json:"data"`
 }
 
 type SOAPEnvelope struct {
@@ -53,4 +53,8 @@ type HelloRequest struct {
 type SOAPResponse struct {
 	XMLName xml.Name `xml:"HelloResponse"`
 	Message string   `xml:"Message"`
+}
+
+type ServerSettings struct {
+	Port int `json:"Port"`
 }

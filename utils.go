@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"strconv"
 )
 
 func readAndParseRequest(r *http.Request) (RequestData, error) {
@@ -122,4 +124,41 @@ func sendJSONResponse(w http.ResponseWriter, response ResponseOutputStruct) {
 
 	w.WriteHeader(http.StatusOK)
 	w.Write(jsonResponse)
+}
+
+func serverInit() string {
+
+	endPointsFile, err := os.Open("end point config.json")
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer endPointsFile.Close()
+
+	endPointsByte, _ := io.ReadAll(endPointsFile)
+
+	err = json.Unmarshal(endPointsByte, &endPointsConfig)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	settingsFile, err1 := os.Open("settings.json")
+	if err1 != nil {
+		fmt.Println(err1)
+	}
+	defer endPointsFile.Close()
+
+	settingsFileByte, _ := io.ReadAll(settingsFile)
+
+	var settings ServerSettings
+
+	err = json.Unmarshal(settingsFileByte, &settings)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	port := strconv.Itoa(settings.Port)
+
+	port = ":" + port
+
+	return port
 }
